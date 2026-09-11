@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Immobilier Gironde 2026</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f4f8; color: #1a2a3a; padding: 16px; min-height: 100vh; }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+            background: #fff; padding: 14px 24px; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            margin-bottom: 16px;
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .header-left h1 { font-size: 1.4rem; font-weight: 600; color: #1a3b5d; }
+        .header-left h1 small { font-size: 0.75rem; font-weight: 400; color: #6b7a8a; }
+
+        .kpi-group { display: flex; gap: 20px; flex-wrap: wrap; }
+        .kpi-item { display: flex; flex-direction: column; }
+        .kpi-item .label { font-size: 0.55rem; text-transform: uppercase; color: #6b7a8a; letter-spacing: 0.3px; }
+        .kpi-item .value { font-size: 1rem; font-weight: 700; color: #1a3b5d; }
+        .kpi-item .value.highlight { color: #2a6f97; }
+
+        .main-row { display: flex; gap: 16px; margin-bottom: 16px; min-height: 540px; }
+        .map-wrapper {
+            flex: 2; background: #e9edf2; border-radius: 16px; overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08); position: relative;
+        }
+        #map { width: 100%; height: 100%; min-height: 520px; }
+
+        .control-panel {
+            flex: 1; min-width: 240px; max-width: 360px; background: #fff; border-radius: 16px;
+            padding: 18px 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            display: flex; flex-direction: column; gap: 12px;
+            max-height: 560px; overflow-y: auto;
+        }
+        .control-panel label { font-weight: 600; font-size: 0.65rem; text-transform: uppercase; color: #6b7a8a; letter-spacing: 0.4px; margin-bottom: 2px; display: block; }
+        .control-panel select,
+        .control-panel input[type="number"],
+        .control-panel input[type="date"] {
+            width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid #d0d7de;
+            font-size: 0.8rem; background: #fafbfc;
+        }
+        .control-panel input[type="date"] { padding: 5px 6px; font-size: 0.72rem; }
+        .row-2 { display: flex; gap: 6px; }
+
+        .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+        .btn-group button {
+            border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.72rem;
+            font-weight: 500; cursor: pointer; transition: all 0.2s; flex: 1; min-width: 60px;
+        }
+        .btn-group button.primary { background: #2a6f97; color: #fff; }
+        .btn-group button.primary:hover { background: #1d4f6e; }
+        .btn-group button.secondary { background: #6c757d; color: #fff; }
+        .btn-group button.secondary:hover { background: #495057; }
+
+        .legend-compact { display: flex; align-items: center; gap: 10px; font-size: 0.72rem; flex-wrap: wrap; }
+        .legend-compact .gradient-bar {
+            width: 100%; height: 10px; border-radius: 5px;
+            background: linear-gradient(90deg, #28a745, #ffc107, #dc3545);
+        }
+        .legend-labels { display: flex; justify-content: space-between; width: 100%; font-size: 0.6rem; color: #6b7a8a; }
+
+        .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .chart-card {
+            background: #fff; border-radius: 16px; padding: 14px 16px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08); border-left: 4px solid #2a6f97;
+        }
+        .chart-card h4 {
+            font-size: 0.8rem; color: #1a3b5d; margin-bottom: 8px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .chart-card canvas { width: 100% !important; max-height: 220px; height: auto !important; }
+
+        .table-wrap { overflow-x: auto; max-height: 420px; overflow-y: auto; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #e9edf2; white-space: nowrap; }
+        th {
+            background: #f7f9fb; position: sticky; top: 0; font-weight: 600;
+            color: #6b7a8a; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        tr:hover td { background: #f7f9fb; }
+        td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+        .leaflet-popup-content { font-size: 0.78rem; min-width: 220px; max-width: 380px; }
+
+        #loading {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 3000;
+            background: rgba(255,255,255,0.9); backdrop-filter: blur(4px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #loading .spinner {
+            width: 40px; height: 40px; border: 4px solid #e9edf2; border-top: 4px solid #2a6f97;
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 14px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #loading .progress-bar {
+            width: 260px; height: 6px; background: #e9edf2; border-radius: 3px;
+            overflow: hidden; margin-top: 12px;
+        }
+        #loading .progress-bar .fill {
+            height: 100%; background: #2a6f97; width: 0%; transition: width 0.3s;
+        }
+
+        #error-msg {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 3500; background: #dc3545; color: #fff; padding: 12px 28px;
+            border-radius: 40px; display: none; font-size: 0.9rem; max-width: 90vw;
+            box-shadow: 0 4px 20px rgba(220,53,69,0.4);
+        }
+
+        .leaflet-cluster-anim .leaflet-marker-icon,
+        .leaflet-cluster-anim .leaflet-marker-shadow { transition: transform 0.3s ease-out, opacity 0.3s ease-in; }
+
+        @media (max-width: 900px) {
+            .main-row { flex-direction: column; }
+            .control-panel { max-width: 100%; max-height: none; }
+            .charts-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <span id="loadingText">Chargement des données…</span>
+        <div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+    </div>
+    <div id="error-msg"></div>
+
+    <!-- ====== EN-TÊTE ====== -->
+    <header class="header">
+        <div class="header-left">
+            <h1>🏘️ Dashboard Immobilier <small>– Gironde 2026 (DVF)</small></h1>
+        </div>
+        <div class="kpi-group">
+            <div class="kpi-item">
+                <span class="label">Prix/m² moyen</span>
+                <span class="value highlight" id="kpi-prix-m2">—</span>
+            </div>
+            <div class="kpi-item">
+                <span class="label">Prix médian</span>
+                <span class="value highlight" id="kpi-prix-median">—</span>
+            </div>
+            <div class="kpi-item">
+                <span class="label">Transactions</span>
+                <span class="value highlight" id="kpi-nb-trans">—</span>
+            </div>
+            <div class="kpi-item">
+                <span class="label">Surface moyenne</span>
+                <span class="value" id="kpi-surface">—</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ====== LIGNE PRINCIPALE ====== -->
+    <section class="main-row">
+        <div class="map-wrapper"><div id="map"></div></div>
+        <aside class="control-panel">
+            <div>
+                <label for="communeSelect">📍 Commune</label>
+                <select id="communeSelect"></select>
+            </div>
+
+            <div>
+                <label for="typeSelect">🏠 Type de bien</label>
+                <select id="typeSelect">
+                    <option value="Tous">Tous</option>
+                    <option value="Maison">Maison</option>
+                    <option value="Appartement">Appartement</option>
+                </select>
+            </div>
+
+            <div>
+                <label>💰 Prix (€)</label>
+                <div class="row-2">
+                    <input type="number" id="prixMin" placeholder="Min" step="10000" value="0" />
+                    <input type="number" id="prixMax" placeholder="Max" step="10000" />
+                </div>
+            </div>
+
+            <div>
+                <label>📅 Période</label>
+                <div class="row-2">
+                    <input type="date" id="dateMin" />
+                    <input type="date" id="dateMax" />
+                </div>
+            </div>
+
+            <div>
+                <label>📍 Affichage carte</label>
+                <select id="sampleMode">
+                    <option value="auto" selected>Auto (recommandé)</option>
+                    <option value="all">Tous les points (lent)</option>
+                    <option value="2000">2000 points</option>
+                    <option value="5000">5000 points</option>
+                </select>
+            </div>
+
+            <div class="btn-group">
+                <button class="primary" id="applyBtn">🔍 Appliquer</button>
+                <button class="secondary" id="resetBtn">Réinitialiser</button>
+            </div>
+
+            <div>
+                <div class="legend-compact">
+                    <span style="font-size:0.7rem; font-weight:600;">Prix/m² :</span>
+                    <div class="gradient-bar"></div>
+                    <div class="legend-labels">
+                        <span>faible</span>
+                        <span>élevé</span>
+                    </div>
+                </div>
+                <div class="legend-compact" style="margin-top:6px;">
+                    <span style="font-size:0.7rem;">Taille ∝ surface du bien</span>
+                </div>
+            </div>
+
+            <div style="font-size:0.65rem; color:#6b7a8a; border-top:1px solid #e9edf2; padding-top:8px;">
+                <div><span id="dataCount">0</span> transactions chargées</div>
+                <div><span id="displayedCount">0</span> affichées après filtres</div>
+            </div>
+        </aside>
+    </section>
+
+    <!-- ====== GRAPHIQUES ====== -->
+    <section class="charts-row">
+        <div class="chart-card">
+            <h4>
+                <span>📊 Distribution des prix au m²</span>
+                <div class="chart-actions">
+                    <button onclick="exportChart('chartHist','png')" style="background:#2a6f97;color:#fff;">PNG</button>
+                    <button onclick="exportChart('chartHist','jpg')" style="background:#fd7e14;color:#fff;">JPG</button>
+                </div>
+            </h4>
+            <canvas id="chartHist"></canvas>
+        </div>
+        <div class="chart-card">
+            <h4>
+                <span>🥧 Répartition par type de bien</span>
+                <div class="chart-actions">
+                    <button onclick="exportChart('chartPie','png')" style="background:#2a6f97;color:#fff;">PNG</button>
+                    <button onclick="exportChart('chartPie','jpg')" style="background:#fd7e14;color:#fff;">JPG</button>
+                </div>
+            </h4>
+            <canvas id="chartPie"></canvas>
+        </div>
+    </section>
+
+    <section class="charts-row">
+        <div class="chart-card">
+            <h4>
+                <span>📈 Évolution du prix/m² dans le temps</span>
+                <div class="chart-actions">
+                    <button onclick="exportChart('chartTime','png')" style="background:#2a6f97;color:#fff;">PNG</button>
+                    <button onclick="exportChart('chartTime','jpg')" style="background:#fd7e14;color:#fff;">JPG</button>
+                </div>
+            </h4>
+            <canvas id="chartTime"></canvas>
+        </div>
+        <div class="chart-card">
+            <h4>
+                <span>📊 Prix moyen vs médian par type</span>
+                <div class="chart-actions">
+                    <button onclick="exportChart('chartBox','png')" style="background:#2a6f97;color:#fff;">PNG</button>
+                    <button onclick="exportChart('chartBox','jpg')" style="background:#fd7e14;color:#fff;">JPG</button>
+                </div>
+            </h4>
+            <canvas id="chartBox"></canvas>
+        </div>
+    </section>
+
+    <!-- ====== DERNIÈRES TRANSACTIONS ====== -->
+    <section class="chart-card" style="border-left-color:#28a745;">
+        <h4>📋 Dernières transactions</h4>
+        <div class="table-wrap">
+            <table id="transactionsTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Commune</th>
+                        <th>Type</th>
+                        <th>Prix</th>
+                        <th>Surface</th>
+                        <th>Prix/m²</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script>
+    'use strict';
+
+    /* ============================================================
+       1. CONFIGURATION
+       ============================================================ */
+    const CONFIG = {
+        dataUrl: 'dvf_data.json.gz',
+        maxPointsAuto: 3000,
+        maxPointsZoom: 8000,   // quand une seule commune est sélectionnée
+        center: [44.8, -0.6],
+        zoom: 9,
+    };
+
+    /* ---------- Dictionnaire des communes de Gironde (codes INSEE → noms) ---------- */
+    const COMMUNES_GIRONDE = {
+        "33063": "Bordeaux", "33039": "Bègles", "33064": "Le Bouscat", "33075": "Cenon",
+        "33069": "Bruges", "33119": "Eysines", "33192": "Gradignan", "33200": "Gujan-Mestras",
+        "33249": "Lormont", "33273": "Mérignac", "33281": "Pessac", "33312": "Saint-Médard-en-Jalles",
+        "33318": "Talence", "33449": "Villenave-d'Ornon", "33056": "Blanquefort", "33162": "Floirac",
+        "33243": "Libourne", "33522": "Arcachon", "33529": "La Teste-de-Buch", "33550": "Cestas",
+        "33001": "Aiguillon", "33002": "Ambès", "33009": "Arès", "33016": "Audenge",
+        "33023": "Barsac", "33028": "Bégadan", "33034": "Biganos", "33040": "Bouliac",
+        "33059": "Carbon-Blanc", "33091": "Martillac", "33097": "Pauillac", "33103": "Saint-Émilion",
+        "33106": "Saint-Loubès", "33128": "Yvrac", "33003": "Arbanats", "33004": "Arcins",
+        "33007": "Bassanne", "33011": "Artigues-près-Bordeaux", "33013": "Asques", "33018": "Auros",
+        "33022": "Barie", "33031": "Béguey", "33032": "Beychac-et-Caillau", "33033": "Bieujac",
+        "33036": "Blésignac", "33037": "Bommes", "33042": "Bourdelles", "33043": "Branne",
+        "33044": "Brannens", "33045": "Braud-et-Saint-Louis", "33048": "Budos", "33052": "Cadarsac",
+        "33053": "Cadillac", "33054": "Cadaujac", "33057": "Canéjan", "33058": "Capian",
+        "33060": "Cardan", "33061": "Carignan-de-Bordeaux", "33065": "Castelnau-de-Médoc",
+        "33066": "Castelviel", "33068": "Caudrot", "33070": "Cazats", "33071": "Cazaugitat",
+        "33072": "Cérons", "33073": "Cestas", "33074": "Chadenac", "33076": "Chamadelle",
+        "33081": "Les Billaux", "33083": "Lignan-de-Bordeaux", "33084": "Loupes",
+        "33085": "Ludon-Médoc", "33086": "Lussac", "33087": "Macau", "33088": "Madirac",
+        "33090": "Marmande", "33094": "Naujac-sur-Mer", "33095": "Neuillac", "33096": "Noaillac",
+        "33099": "Peyrat-de-Bellegarde", "33100": "Pujols-sur-Ciron", "33101": "Queyrac",
+        "33102": "Rions", "33104": "Saint-Genès-de-Lombaud", "33105": "Saint-Laurent-Médoc",
+        "33108": "Saint-Pierre-de-Mons", "33109": "Saint-Quentin-de-Baron", "33110": "Saint-Selve",
+        "33111": "Saint-Vincent-de-Paul", "33112": "Sallebœuf", "33113": "Saumos",
+        "33114": "Savignac-de-l'Isle", "33115": "Tabanac", "33117": "Targon", "33120": "Teuillac",
+        "33121": "Tizac-de-Lapouyade", "33122": "Torcy", "33123": "Le Tourne", "33124": "Le Tuzan",
+        "33127": "Villeneuve-lès-Bordeaux"
+    };
+
+    /* ---------- État global ---------- */
+    let allData = [];        // Toutes les transactions
+    let filteredData = [];   // Après filtres
+    let carte = null;
+    let clusterGroup = null;
+    let chartHist = null, chartPie = null, chartTime = null, chartBox = null;
+
+    /* ============================================================
+       2. UTILITAIRES
+       ============================================================ */
+    function texteEtat(msg) { document.getElementById('loadingText').textContent = msg; }
+    function setProgress(pct) { document.getElementById('progressFill').style.width = pct + '%'; }
+
+    const fmtEuro = v => (v == null || isNaN(v) ? 'n.d.' : Math.round(v).toLocaleString('fr-FR') + ' €');
+    const fmtEuroM2 = v => (v == null || isNaN(v) ? 'n.d.' : Math.round(v).toLocaleString('fr-FR') + ' €/m²');
+    const fmtNombre = v => (v == null || isNaN(v) ? 'n.d.' : Math.round(v).toLocaleString('fr-FR'));
+    const fmtSurface = v => (v == null || isNaN(v) ? 'n.d.' : Math.round(v).toLocaleString('fr-FR') + ' m²');
+    const fmtDate = v => (v ? new Date(v).toLocaleDateString('fr-FR') : 'n.d.');
+
+    function nomCommune(code) {
+        return COMMUNES_GIRONDE[code] || `Commune ${code}`;
+    }
+
+    function escapeHTML(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c =>
+            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ============================================================
+       3. CHARGEMENT DU JSON GZIP
+       ============================================================ */
+    async function loadGzipJson(url) {
+        texteEtat('Téléchargement des données…');
+        setProgress(10);
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} — fichier introuvable ? (${url})`);
+        }
+
+        let text;
+        if (typeof DecompressionStream !== 'undefined') {
+            console.log('✅ Décompression native (DecompressionStream)');
+            setProgress(30);
+            const ds = new DecompressionStream('gzip');
+            const stream = response.body.pipeThrough(ds);
+            text = await new Response(stream).text();
+        } else if (typeof pako !== 'undefined') {
+            console.log('✅ Décompression via pako');
+            setProgress(30);
+            const buffer = await response.arrayBuffer();
+            setProgress(60);
+            text = pako.ungzip(new Uint8Array(buffer), { to: 'string' });
+        } else {
+            throw new Error('Aucun décompresseur GZIP disponible (ni DecompressionStream ni pako)');
+        }
+
+        setProgress(75);
+        texteEtat('Analyse du JSON…');
+        const data = JSON.parse(text);
+        setProgress(85);
+        return data;
+    }
+
+    /* ============================================================
+       4. PRÉPARATION DES DONNÉES
+       ============================================================ */
+    function prepareData(rawData) {
+        texteEtat('Préparation des données…');
+        const cleaned = [];
+
+        for (const row of rawData) {
+            const date = row.date_mutation ? new Date(row.date_mutation) : null;
+            if (!date || isNaN(date.getTime())) continue;
+
+            const lat = row.latitude != null ? Number(row.latitude) : null;
+            const lon = row.longitude != null ? Number(row.longitude) : null;
+
+            cleaned.push({
+                date: date,
+                dateMs: date.getTime(),
+                valeur: Number(row.valeur_fonciere),
+                surface: Number(row.surface_reelle_bati),
+                prixM2: Number(row.prix_m2),
+                codeCommune: String(row.code_commune).padStart(5, '0'),
+                type: String(row.type_local),
+                lat: lat,
+                lon: lon,
+            });
+        }
+
+        console.log(`✅ ${cleaned.length} transactions préparées`);
+        return cleaned;
+    }
+
+    /* ============================================================
+       5. INITIALISATION DE LA CARTE
+       ============================================================ */
+    function initMap() {
+        carte = L.map('map', { preferCanvas: true }).setView(CONFIG.center, CONFIG.zoom);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(carte);
+
+        clusterGroup = L.markerClusterGroup({
+            maxClusterRadius: 50,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            chunkedLoading: true,
+        });
+
+        carte.addLayer(clusterGroup);
+    }
+
+    /* ============================================================
+       6. COULEUR EN FONCTION DU PRIX/M²
+       ============================================================ */
+    function couleurPrix(prixM2, pMin, pMax) {
+        if (!isFinite(prixM2)) return '#999';
+        const norm = pMax > pMin ? Math.min(Math.max((prixM2 - pMin) / (pMax - pMin), 0), 1) : 0.5;
+
+        // Vert → Jaune → Rouge
+        let r, g, b;
+        if (norm < 0.5) {
+            const t = norm * 2;
+            r = Math.round(40 + t * 215);
+            g = Math.round(167 + t * 40);
+            b = Math.round(69 - t * 69);
+        } else {
+            const t = (norm - 0.5) * 2;
+            r = Math.round(255 - t * 35);
+            g = Math.round(193 - t * 140);
+            b = Math.round(7 + t * 35);
+        }
+        return `rgb(${r},${g},${b})`;
+    }
+
+    /* ============================================================
+       7. AFFICHAGE DES MARQUEURS
+       ============================================================ */
+    function displayMarkers(data) {
+        if (!clusterGroup) return;
+
+        // Vider les marqueurs précédents
+        clusterGroup.clearLayers();
+
+        // Filtrer les points valides
+        const validData = data.filter(d =>
+            d.lat != null && d.lon != null &&
+            d.lat >= 44.0 && d.lat <= 45.7 &&
+            d.lon >= -1.4 && d.lon <= 0.5
+        );
+
+        if (validData.length === 0) {
+            document.getElementById('displayedCount').textContent = '0';
+            return;
+        }
+
+        // Calculer les bornes de prix/m²
+        const prixValues = validData.map(d => d.prixM2).filter(v => isFinite(v));
+        const pMin = Math.min(...prixValues);
+        const pMax = Math.max(...prixValues);
+
+        // Déterminer combien de points afficher
+        const mode = document.getElementById('sampleMode').value;
+        let maxPoints;
+        if (mode === 'all') {
+            maxPoints = validData.length;
+        } else if (mode === 'auto') {
+            // Échantillonnage intelligent : si une seule commune, plus de points
+            const commune = document.getElementById('communeSelect').value;
+            maxPoints = commune ? CONFIG.maxPointsZoom : CONFIG.maxPointsAuto;
+        } else {
+            maxPoints = parseInt(mode);
+        }
+
+        let sample = validData;
+        if (validData.length > maxPoints) {
+            // Échantillonnage aléatoire déterministe
+            const step = validData.length / maxPoints;
+            sample = [];
+            for (let i = 0; i < maxPoints; i++) {
+                sample.push(validData[Math.floor(i * step)]);
+            }
+        }
+
+        // Ajouter les marqueurs au cluster
+        const markers = [];
+        for (const d of sample) {
+            const color = couleurPrix(d.prixM2, pMin, pMax);
+
+            // Taille ∝ surface (bornée)
+            const surfNorm = Math.min(Math.max((d.surface - 15) / 200, 0), 1);
+            const radius = 4 + surfNorm * 8;
+
+            const marker = L.circleMarker([d.lat, d.lon], {
+                radius: radius,
+                fillColor: color,
+                color: '#fff',
+                weight: 1,
+                opacity: 0.85,
+                fillOpacity: 0.8,
+            });
+
+            marker.bindPopup(`
+                <div style="font-weight:700; font-size:0.9rem; color:#1a3b5d; border-bottom:1px solid #e9edf2; padding-bottom:5px; margin-bottom:6px;">
+                    ${escapeHTML(nomCommune(d.codeCommune))}
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:3px 8px; font-size:0.75rem;">
+                    <div style="color:#6b7a8a;">📅 Date</div>
+                    <div style="font-weight:600; text-align:right;">${fmtDate(d.date)}</div>
+                    <div style="color:#6b7a8a;">🏠 Type</div>
+                    <div style="font-weight:600; text-align:right;">${escapeHTML(d.type)}</div>
+                    <div style="color:#6b7a8a;">💰 Prix</div>
+                    <div style="font-weight:600; text-align:right;">${fmtEuro(d.valeur)}</div>
+                    <div style="color:#6b7a8a;">📐 Surface</div>
+                    <div style="font-weight:600; text-align:right;">${fmtSurface(d.surface)}</div>
+                    <div style="color:#6b7a8a;">📊 Prix/m²</div>
+                    <div style="font-weight:700; text-align:right; color:${color};">${fmtEuroM2(d.prixM2)}</div>
+                </div>
+            `);
+
+            markers.push(marker);
+        }
+
+        clusterGroup.addLayers(markers);
+
+        document.getElementById('displayedCount').textContent = sample.length.toLocaleString('fr-FR') +
+            (sample.length < validData.length ? ` (sur ${validData.length.toLocaleString('fr-FR')})` : '');
+
+        console.log(`${markers.length} marqueurs affichés sur ${validData.length} valides`);
+    }
+
+    /* ============================================================
+       8. GRAPHIQUES
+       ============================================================ */
+    function updateCharts(data) {
+        if (data.length === 0) {
+            [chartHist, chartPie, chartTime, chartBox].forEach(c => c && c.destroy());
+            chartHist = chartPie = chartTime = chartBox = null;
+            return;
+        }
+
+        const prixM2 = data.map(d => d.prixM2).filter(v => isFinite(v));
+
+        // ---------- HISTOGRAMME ----------
+        const ctxHist = document.getElementById('chartHist').getContext('2d');
+        if (chartHist) chartHist.destroy();
+
+        const minP = Math.min(...prixM2);
+        const maxP = Math.min(Math.max(...prixM2), 20000); // plafonner à 20k pour la lisibilité
+        const nbBins = 40;
+        const binWidth = (maxP - minP) / nbBins;
+        const bins = new Array(nbBins).fill(0);
+        for (const v of prixM2) {
+            if (v > maxP) continue;
+            const idx = Math.min(Math.floor((v - minP) / binWidth), nbBins - 1);
+            bins[idx]++;
+        }
+        const histLabels = bins.map((_, i) => Math.round(minP + i * binWidth));
+
+        chartHist = new Chart(ctxHist, {
+            type: 'bar',
+            data: {
+                labels: histLabels,
+                datasets: [{
+                    label: 'Transactions',
+                    data: bins,
+                    backgroundColor: '#2a6f97',
+                    borderColor: '#1d4f6e',
+                    borderWidth: 1,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: items => items[0].label + ' €/m²',
+                            label: ctx => `${ctx.raw} transaction${ctx.raw > 1 ? 's' : ''}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Prix/m² (€)', font: { size: 10 } },
+                        ticks: { maxTicksLimit: 8, font: { size: 9 } }
+                    },
+                    y: {
+                        title: { display: true, text: 'Nb transactions', font: { size: 10 } },
+                        beginAtZero: true,
+                        ticks: { font: { size: 9 } }
+                    }
+                }
+            }
+        });
+
+        // ---------- CAMEMBERT ----------
+        const ctxPie = document.getElementById('chartPie').getContext('2d');
+        if (chartPie) chartPie.destroy();
+
+        const typeCount = {};
+        for (const d of data) typeCount[d.type] = (typeCount[d.type] || 0) + 1;
+
+        chartPie = new Chart(ctxPie, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(typeCount),
+                datasets: [{
+                    data: Object.values(typeCount),
+                    backgroundColor: ['#2a6f97', '#fd7e14', '#28a745', '#6f42c1'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 10 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct = ((ctx.raw / total) * 100).toFixed(1);
+                                return `${ctx.label} : ${ctx.raw.toLocaleString('fr-FR')} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // ---------- ÉVOLUTION TEMPORELLE ----------
+        const ctxTime = document.getElementById('chartTime').getContext('2d');
+        if (chartTime) chartTime.destroy();
+
+        const monthData = {};
+        for (const d of data) {
+            const key = `${d.date.getFullYear()}-${String(d.date.getMonth() + 1).padStart(2, '0')}`;
+            if (!monthData[key]) monthData[key] = [];
+            monthData[key].push(d.prixM2);
+        }
+        const sortedMonths = Object.keys(monthData).sort();
+        const monthAvg = sortedMonths.map(m => {
+            const vals = monthData[m];
+            return vals.reduce((a, b) => a + b, 0) / vals.length;
+        });
+
+        chartTime = new Chart(ctxTime, {
+            type: 'line',
+            data: {
+                labels: sortedMonths,
+                datasets: [{
+                    label: 'Prix/m² moyen',
+                    data: monthAvg,
+                    borderColor: '#2a6f97',
+                    backgroundColor: 'rgba(42,111,151,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => fmtEuroM2(ctx.raw)
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { maxTicksLimit: 12, font: { size: 9 } }, grid: { display: false } },
+                    y: {
+                        title: { display: true, text: 'Prix/m² moyen (€)', font: { size: 10 } },
+                        ticks: { font: { size: 9 } }
+                    }
+                }
+            }
+        });
+
+        // ---------- PRIX MOYEN VS MÉDIAN PAR TYPE ----------
+        const ctxBox = document.getElementById('chartBox').getContext('2d');
+        if (chartBox) chartBox.destroy();
+
+        const typeStats = {};
+        for (const d of data) {
+            if (!typeStats[d.type]) typeStats[d.type] = [];
+            typeStats[d.type].push(d.prixM2);
+        }
+        const boxLabels = Object.keys(typeStats);
+        const boxAvg = boxLabels.map(t => {
+            const vals = typeStats[t];
+            return vals.reduce((a, b) => a + b, 0) / vals.length;
+        });
+        const boxMedian = boxLabels.map(t => {
+            const vals = [...typeStats[t]].sort((a, b) => a - b);
+            const mid = Math.floor(vals.length / 2);
+            return vals.length % 2 !== 0 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2;
+        });
+
+        chartBox = new Chart(ctxBox, {
+            type: 'bar',
+            data: {
+                labels: boxLabels,
+                datasets: [
+                    { label: 'Prix/m² moyen', data: boxAvg, backgroundColor: '#2a6f97', borderColor: '#1d4f6e', borderWidth: 1 },
+                    { label: 'Prix/m² médian', data: boxMedian, backgroundColor: '#fd7e14', borderColor: '#e06c00', borderWidth: 1 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 10 } } },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ' : ' + fmtEuroM2(ctx.raw) } }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        title: { display: true, text: 'Prix/m² (€)', font: { size: 10 } },
+                        beginAtZero: true,
+                        ticks: { font: { size: 9 } }
+                    }
+                }
+            }
+        });
+    }
+
+    /* ============================================================
+       9. TABLEAU DES TRANSACTIONS
+       ============================================================ */
+    function updateTable(data) {
+        const tbody = document.querySelector('#transactionsTable tbody');
+        tbody.innerHTML = '';
+
+        const sorted = [...data].sort((a, b) => b.dateMs - a.dateMs).slice(0, 200);
+
+        const frag = document.createDocumentFragment();
+        for (const d of sorted) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${fmtDate(d.date)}</td>
+                <td>${escapeHTML(nomCommune(d.codeCommune))}</td>
+                <td>${escapeHTML(d.type)}</td>
+                <td class="num">${fmtEuro(d.valeur)}</td>
+                <td class="num">${fmtSurface(d.surface)}</td>
+                <td class="num">${fmtEuroM2(d.prixM2)}</td>
+            `;
+            frag.appendChild(tr);
+        }
+        tbody.appendChild(frag);
+    }
+
+    /* ============================================================
+       10. KPIs
+       ============================================================ */
+    function updateKPIs(data) {
+        if (data.length === 0) {
+            ['kpi-prix-m2', 'kpi-prix-median', 'kpi-nb-trans', 'kpi-surface'].forEach(id =>
+                document.getElementById(id).textContent = '—');
+            return;
+        }
+
+        const prixM2 = data.map(d => d.prixM2).filter(v => isFinite(v));
+        const valeurs = data.map(d => d.valeur).filter(v => isFinite(v));
+        const surfaces = data.map(d => d.surface).filter(v => isFinite(v));
+
+        const avgPrixM2 = prixM2.reduce((a, b) => a + b, 0) / prixM2.length;
+
+        const sortedValeurs = [...valeurs].sort((a, b) => a - b);
+        const mid = Math.floor(sortedValeurs.length / 2);
+        const medianPrix = sortedValeurs.length % 2 !== 0
+            ? sortedValeurs[mid]
+            : (sortedValeurs[mid - 1] + sortedValeurs[mid]) / 2;
+
+        const avgSurface = surfaces.reduce((a, b) => a + b, 0) / surfaces.length;
+
+        document.getElementById('kpi-prix-m2').textContent = fmtEuroM2(avgPrixM2);
+        document.getElementById('kpi-prix-median').textContent = fmtEuro(medianPrix);
+        document.getElementById('kpi-nb-trans').textContent = fmtNombre(data.length);
+        document.getElementById('kpi-surface').textContent = fmtSurface(avgSurface);
+    }
+
+    /* ============================================================
+       11. FILTRAGE
+       ============================================================ */
+    function filterData() {
+        const commune = document.getElementById('communeSelect').value;
+        const type = document.getElementById('typeSelect').value;
+        const prixMin = parseFloat(document.getElementById('prixMin').value) || 0;
+        const prixMax = parseFloat(document.getElementById('prixMax').value) || Infinity;
+        const dateMin = document.getElementById('dateMin').value;
+        const dateMax = document.getElementById('dateMax').value;
+
+        let data = allData;
+
+        if (commune) data = data.filter(d => d.codeCommune === commune);
+        if (type !== 'Tous') data = data.filter(d => d.type === type);
+        data = data.filter(d => d.valeur >= prixMin && d.valeur <= prixMax);
+
+        if (dateMin) {
+            const minDate = new Date(dateMin).getTime();
+            data = data.filter(d => d.dateMs >= minDate);
+        }
+        if (dateMax) {
+            const maxDate = new Date(dateMax).getTime() + 86400000; // +1 jour
+            data = data.filter(d => d.dateMs <= maxDate);
+        }
+
+        filteredData = data;
+
+        displayMarkers(data);
+        updateCharts(data);
+        updateTable(data);
+        updateKPIs(data);
+    }
+
+    /* ============================================================
+       12. PEUPLEMENT DES SÉLECTEURS
+       ============================================================ */
+    function populateSelectors() {
+        // Récupérer les communes réellement présentes dans les données
+        const codesPresents = new Set(allData.map(d => d.codeCommune));
+        const communesDispo = Object.entries(COMMUNES_GIRONDE)
+            .filter(([code]) => codesPresents.has(code))
+            .sort((a, b) => a[1].localeCompare(b[1]));
+
+        const select = document.getElementById('communeSelect');
+        select.innerHTML = '<option value="">🌍 Toutes les communes</option>';
+
+        // Ajouter les communes triées par nombre de transactions (décroissant)
+        const counts = {};
+        for (const d of allData) counts[d.codeCommune] = (counts[d.codeCommune] || 0) + 1;
+        communesDispo.sort((a, b) => (counts[b[0]] || 0) - (counts[a[0]] || 0));
+
+        for (const [code, nom] of communesDispo) {
+            const opt = document.createElement('option');
+            opt.value = code;
+            const nb = counts[code] || 0;
+            opt.textContent = `${nom} (${nb.toLocaleString('fr-FR')})`;
+            select.appendChild(opt);
+        }
+
+        // Sélectionner Bordeaux par défaut s'il existe
+        if (codesPresents.has('33063')) {
+            select.value = '33063';
+        }
+    }
+
+    /* ============================================================
+       13. EXPORT DES GRAPHIQUES
+       ============================================================ */
+    function getChartImage(chart, format = 'png') {
+        const backgroundColor = (format === 'jpg' || format === 'jpeg') ? '#ffffff' : null;
+        return chart.toBase64Image({
+            format: (format === 'jpg' || format === 'jpeg') ? 'jpeg' : 'png',
+            quality: 0.9,
+            backgroundColor: backgroundColor
+        });
+    }
+
+    function downloadFile(data, filename) {
+        const link = document.createElement('a');
+        link.href = data;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    window.exportChart = function(chartId, format) {
+        const map = { chartHist, chartPie, chartTime, chartBox };
+        const chart = map[chartId];
+        if (!chart) return alert('Aucun graphique à exporter.');
+
+        const imageData = getChartImage(chart, format);
+        const ext = (format === 'jpg' || format === 'jpeg') ? 'jpg' : format;
+        downloadFile(imageData, `${chartId}.${ext}`);
+    };
+
+    /* ============================================================
+       14. INITIALISATION
+       ============================================================ */
+    function afficherErreur(message) {
+        let msg = message;
+        if (message instanceof Error) msg = message.message;
+        else if (message && typeof message === 'object') {
+            try { msg = JSON.stringify(message); } catch { msg = String(message); }
+        }
+        document.getElementById('error-msg').textContent = '⚠️ ' + msg;
+        document.getElementById('error-msg').style.display = 'block';
+        document.getElementById('loading').style.display = 'none';
+        console.error('Erreur complète:', message);
+    }
+
+    (async function() {
+        try {
+            if (typeof L === 'undefined') throw new Error("Leaflet n'a pas pu être chargé.");
+            if (typeof Chart === 'undefined') throw new Error("Chart.js n'a pas pu être chargé.");
+
+            // 1. Charger le JSON.GZ
+            const rawData = await loadGzipJson(CONFIG.dataUrl);
+            console.log(`✅ ${rawData.length} entrées brutes chargées`);
+            setProgress(85);
+
+            // 2. Préparer
+            allData = prepareData(rawData);
+            setProgress(90);
+
+            // 3. Init carte
+            initMap();
+
+            // 4. Peupler
+            populateSelectors();
+
+            // 5. Bornes dates
+            const dates = allData.map(d => d.dateMs);
+            const minDate = new Date(Math.min(...dates));
+            const maxDate = new Date(Math.max(...dates));
+            document.getElementById('dateMin').value = minDate.toISOString().split('T')[0];
+            document.getElementById('dateMax').value = maxDate.toISOString().split('T')[0];
+
+            // 6. Bornes prix
+            const maxPrix = Math.max(...allData.map(d => d.valeur));
+            document.getElementById('prixMax').value = Math.ceil(maxPrix / 10000) * 10000;
+
+            // 7. Appliquer filtres initiaux
+            filterData();
+
+            // 8. Événements
+            document.getElementById('applyBtn').addEventListener('click', filterData);
+            document.getElementById('communeSelect').addEventListener('change', filterData);
+            document.getElementById('typeSelect').addEventListener('change', filterData);
+            document.getElementById('sampleMode').addEventListener('change', () => displayMarkers(filteredData));
+
+            document.getElementById('resetBtn').addEventListener('click', function() {
+                document.getElementById('communeSelect').value = '';
+                document.getElementById('typeSelect').value = 'Tous';
+                document.getElementById('prixMin').value = '0';
+                document.getElementById('prixMax').value = Math.ceil(Math.max(...allData.map(d => d.valeur)) / 10000) * 10000;
+                document.getElementById('dateMin').value = minDate.toISOString().split('T')[0];
+                document.getElementById('dateMax').value = maxDate.toISOString().split('T')[0];
+                document.getElementById('sampleMode').value = 'auto';
+                filterData();
+            });
+
+            document.getElementById('dataCount').textContent = allData.length.toLocaleString('fr-FR');
+
+            setProgress(100);
+            document.getElementById('loading').style.display = 'none';
+            setTimeout(() => carte.invalidateSize(), 200);
+
+            console.log('✅ Dashboard chargé avec succès');
+
+        } catch (err) {
+            console.error('Erreur détaillée:', err);
+            afficherErreur(err?.message || String(err));
+        }
+    })();
+    </script>
+</body>
+</html>

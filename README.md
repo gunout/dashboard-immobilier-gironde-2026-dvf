@@ -23,6 +23,14 @@ Ce projet transforme les données ouvertes **DVF** (Demandes de Valeurs Foncièr
 
 ---
 
+## 📸 Aperçu
+
+![Dashboard Immobilier Gironde 2026](https://github.com/user-attachments/assets/55d94980-de87-4982-96de-a92e72641658)
+
+*Vue d'ensemble du dashboard — carte interactive, KPIs, graphiques et tableau des dernières transactions.*
+
+---
+
 ## ✨ Fonctionnalités
 
 ### 🗺️ Carte interactive
@@ -33,6 +41,7 @@ Ce projet transforme les données ouvertes **DVF** (Demandes de Valeurs Foncièr
 - **Échantillonnage intelligent** : plus de points affichés quand une commune est sélectionnée
 
 ### 📈 Graphiques
+
 | Graphique | Description |
 |---|---|
 | **Histogramme** | Distribution des prix au m² (40 bins) |
@@ -73,21 +82,24 @@ Ce projet transforme les données ouvertes **DVF** (Demandes de Valeurs Foncièr
 ---
 
 ## 📁 Structure du projet
+
     Dashboard-Immobilier-Gironde-2026/
     ├── index.html # Dashboard web (fichier unique)
     ├── dvf_data.json.gz # Données compressées (~9.6 Mo)
+    ├── convert.py # Script Python de conversion CSV → JSON.GZ
     ├── README.md # Ce fichier
     ├── LICENSE # Licence MIT
     └── docs/
     └── screenshot.png # Capture d'écran
+
 ---
 
 ## 🚀 Installation
 
 ### Prérequis
-- **Python 3.8+** (pour la conversion)
+- **Python 3.8+** (pour servir le dashboard)
 - **Navigateur moderne** (Chrome, Firefox, Edge, Safari récents)
-- **~2 Go de RAM** libres (pour la conversion du CSV)
+- **~2 Go de RAM** libres (si vous régénérez les données)
 
 ### 1️⃣ Cloner le dépôt
 
@@ -95,16 +107,17 @@ Ce projet transforme les données ouvertes **DVF** (Demandes de Valeurs Foncièr
 git clone https://github.com/VOTRE-USERNAME/Dashboard-Immobilier-Gironde-2026.git
 cd Dashboard-Immobilier-Gironde-2026
 ```
+2️⃣ Lancer le dashboard
 
-### 2️⃣ Lancer le dashboard
+    ⚠️ Important : le dashboard doit être servi via un serveur HTTP. Le protocole file:// ne permet pas le chargement GZIP.
 
-Important : le dashboard doit être servi via un serveur HTTP (le protocole file:// ne permet pas le chargement GZIP).
-bash
+```bash
 
-    python -m http.server 8000
+python -m http.server 8000
+```
 
-Puis ouvrir :          
-
+Puis ouvrir : 
+     
     http://localhost:8000
 
 
@@ -130,7 +143,6 @@ Tous les points	⚠️ Lent (peut prendre 5-10 sec)
 Export des graphiques
 
 Chaque graphique dispose de boutons PNG et JPG pour l'exporter.
-
 🔬 Détails techniques
 Format des données
 
@@ -153,7 +165,24 @@ json
 Compression GZIP : ratio ~6:1 (58.9 Mo → 9.6 Mo)
 Conversion Lambert-93 → WGS84
 
-### 📊 Source des données
+La conversion est faite en Python pur (sans pyproj), avec la formule officielle IGN. Précision ~1 mètre, aucune dépendance externe.
+Décompression GZIP côté navigateur
+
+Deux stratégies pour compatibilité maximale :
+javascript
+
+if (typeof DecompressionStream !== 'undefined') {
+    // API native (Chrome 80+, Firefox 113+, Safari 16.4+)
+    const ds = new DecompressionStream('gzip');
+    const stream = response.body.pipeThrough(ds);
+    text = await new Response(stream).text();
+} else if (typeof pako !== 'undefined') {
+    // Fallback via pako
+    const buffer = await response.arrayBuffer();
+    text = pako.ungzip(new Uint8Array(buffer), { to: 'string' });
+}
+
+📊 Source des données
 
 Les données proviennent du fichier DVF+ (Demandes de Valeurs Foncières) publié par la DGFiP :
 
@@ -180,31 +209,26 @@ Transactions valides	301 978
 Communes	~100
 Prix/m² moyen	~3 000 €
 Taille JSON.GZ	9.6 Mo
-
-### 🧪 Tests rapides
-
+🧪 Tests rapides
 Vérifier que le JSON se charge correctement
-```bash
+bash
 
 curl http://localhost:8000/dvf_data.json.gz | gunzip | head -c 500
 
 Vérifier la version de Python
-```
+bash
 
 python --version
 python -c "import platform; print(platform.architecture())"
 
-### 🐛 Problèmes connus
-
+🐛 Problèmes connus
 Problème	Cause	Solution
-
 HTTP 404 sur dvf_data.json.gz	Fichier manquant	Vérifier qu'il est dans le même dossier que index.html
 Aucun décompresseur GZIP	Navigateur ancien	Utiliser Chrome/Firefox/Edge récent
 out of memory en conversion	Python 32 bits	Réduire CHUNK_SIZE à 10 000
 pip install pyproj échoue	Python 32 bits	Le script n'en a plus besoin (formule IGN intégrée)
 Carte vide	Coordonnées invalides	Vérifier la console navigateur (F12)
-
-### 🗺️ Roadmap
+🗺️ Roadmap
 
     □
 
@@ -231,7 +255,7 @@ Carte vide	Coordonnées invalides	Vérifier la console navigateur (F12)
 
     Internationalisation (FR / EN)
 
-### 🤝 Contribution
+🤝 Contribution
 
 Les contributions sont les bienvenues ! Pour contribuer :
 
@@ -253,40 +277,20 @@ Style de code
 
     HTML/CSS : classes sémantiques, CSS moderne (grid/flex)
 
-### EXAMPLE
+📄 Licence
 
-<img width="1786" height="1376" alt="Screenshot 2026-09-12 at 02-54-16 Dashboard Immobilier Gironde 2026" src="https://github.com/user-attachments/assets/55d94980-de87-4982-96de-a92e72641658" />
-
-
-
-### 📄 Licence
-
-MIT License
-
-Copyright (c) 2026 VOTRE NOM
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails.
 
 Les données DVF sont publiées sous Licence Ouverte / Open Licence 2.0 par la DGFiP.
+👤 Auteur
 
+Votre Nom
 
-### 🙏 Remerciements
+    GitHub : @VOTRE-USERNAME
+
+    Email : votre.email@example.com
+
+🙏 Remerciements
 
     DGFiP pour la publication des données DVF
 
@@ -300,7 +304,7 @@ Les données DVF sont publiées sous Licence Ouverte / Open Licence 2.0 par la D
 
     IGN pour la formule officielle Lambert-93
 
-### 📚 Ressources
+📚 Ressources
 
     📖 Documentation DVF
 
@@ -309,10 +313,3 @@ Les données DVF sont publiées sous Licence Ouverte / Open Licence 2.0 par la D
     📖 Lambert-93 (EPSG:2154)
 
     📖 WGS84 (EPSG:4326)
-
-⭐ Si ce projet vous plaît, n'hésitez pas à lui donner une étoile ! ⭐
-text
-
-
-
-

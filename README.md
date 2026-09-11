@@ -73,15 +73,13 @@ Ce projet transforme les données ouvertes **DVF** (Demandes de Valeurs Foncièr
 ---
 
 ## 📁 Structure du projet
-Dashboard-Immobilier-Gironde-2026/
-├── index.html # Dashboard web (fichier unique)
-├── dvf_data.json.gz # Données compressées (~9.6 Mo)
-├── README.md # Ce fichier
-├── LICENSE # Licence MIT
-└── docs/
-└── screenshot.png # Capture d'écran
-
-
+    Dashboard-Immobilier-Gironde-2026/
+    ├── index.html # Dashboard web (fichier unique)
+    ├── dvf_data.json.gz # Données compressées (~9.6 Mo)
+    ├── README.md # Ce fichier
+    ├── LICENSE # Licence MIT
+    └── docs/
+    └── screenshot.png # Capture d'écran
 ---
 
 ## 🚀 Installation
@@ -254,6 +252,12 @@ Style de code
     Python : PEP 8, commentaires en français
 
     HTML/CSS : classes sémantiques, CSS moderne (grid/flex)
+
+### EXAMPLE
+
+<img width="1786" height="1376" alt="Screenshot 2026-09-12 at 02-54-16 Dashboard Immobilier Gironde 2026" src="https://github.com/user-attachments/assets/55d94980-de87-4982-96de-a92e72641658" />
+
+
 
 ### 📄 Licence
 

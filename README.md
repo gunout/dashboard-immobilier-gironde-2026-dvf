@@ -224,8 +224,12 @@ python -c "import platform; print(platform.architecture())"
 
 ### 🐛 Problèmes connus
 Problème	Cause	Solution
-HTTP 404 sur dvf_data.json.gz	Fichier manquant	Vérifier qu'il est dans le même dossier que index.html
-Aucun décompresseur GZIP	Navigateur ancien	Utiliser Chrome/Firefox/Edge récent
+HTTP 404 sur dvf_data.json.gz	
+Fichier manquant	
+Vérifier qu'il est dans le même dossier que index.html
+Aucun décompresseur GZIP	
+Navigateur ancien	
+Utiliser Chrome/Firefox/Edge récent
 out of memory en conversion	Python 32 bits	Réduire CHUNK_SIZE à 10 000
 pip install pyproj échoue	Python 32 bits	Le script n'en a plus besoin (formule IGN intégrée)
 Carte vide	Coordonnées invalides	Vérifier la console navigateur (F12)

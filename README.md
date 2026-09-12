@@ -107,7 +107,7 @@ Ce projet transforme les données ouvertes **DVF** (Demandes de Valeurs Foncièr
 git clone https://github.com/VOTRE-USERNAME/Dashboard-Immobilier-Gironde-2026.git
 cd Dashboard-Immobilier-Gironde-2026
 ```
-2️⃣ Lancer le dashboard
+### 2️⃣ Lancer le dashboard
 
     ⚠️ Important : le dashboard doit être servi via un serveur HTTP. Le protocole file:// ne permet pas le chargement GZIP.
 
@@ -182,7 +182,7 @@ if (typeof DecompressionStream !== 'undefined') {
     text = pako.ungzip(new Uint8Array(buffer), { to: 'string' });
 }
 
-📊 Source des données
+### 📊 Source des données
 
 Les données proviennent du fichier DVF+ (Demandes de Valeurs Foncières) publié par la DGFiP :
 
@@ -209,7 +209,8 @@ Transactions valides	301 978
 Communes	~100
 Prix/m² moyen	~3 000 €
 Taille JSON.GZ	9.6 Mo
-🧪 Tests rapides
+
+### 🧪 Tests rapides
 Vérifier que le JSON se charge correctement
 bash
 
@@ -221,14 +222,15 @@ bash
 python --version
 python -c "import platform; print(platform.architecture())"
 
-🐛 Problèmes connus
+### 🐛 Problèmes connus
 Problème	Cause	Solution
 HTTP 404 sur dvf_data.json.gz	Fichier manquant	Vérifier qu'il est dans le même dossier que index.html
 Aucun décompresseur GZIP	Navigateur ancien	Utiliser Chrome/Firefox/Edge récent
 out of memory en conversion	Python 32 bits	Réduire CHUNK_SIZE à 10 000
 pip install pyproj échoue	Python 32 bits	Le script n'en a plus besoin (formule IGN intégrée)
 Carte vide	Coordonnées invalides	Vérifier la console navigateur (F12)
-🗺️ Roadmap
+
+### 🗺️ Roadmap
 
     □
 
@@ -255,7 +257,7 @@ Carte vide	Coordonnées invalides	Vérifier la console navigateur (F12)
 
     Internationalisation (FR / EN)
 
-🤝 Contribution
+### 🤝 Contribution
 
 Les contributions sont les bienvenues ! Pour contribuer :
 
@@ -277,7 +279,7 @@ Style de code
 
     HTML/CSS : classes sémantiques, CSS moderne (grid/flex)
 
-📄 Licence
+### 📄 Licence
 
 Ce projet est sous licence MIT.
 
@@ -306,7 +308,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-🙏 Remerciements
+### 🙏 Remerciements
 
     DGFiP pour la publication des données DVF
 
@@ -320,7 +322,7 @@ SOFTWARE.
 
     IGN pour la formule officielle Lambert-93
 
-📚 Ressources
+### 📚 Ressources
 
     📖 Documentation DVF
 

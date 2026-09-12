@@ -136,18 +136,26 @@ Interface principale
     Consulter les graphiques qui se mettent à jour en temps réel
 
 Mode d'affichage carte
+
 Mode	Description
+
 Auto (recommandé)	3 000 points en vue globale, 8 000 si une commune est sélectionnée
+
 Tous les points	⚠️ Lent (peut prendre 5-10 sec)
+
 2000 / 5000 points	Échantillonnage fixe
+
 Export des graphiques
 
 Chaque graphique dispose de boutons PNG et JPG pour l'exporter.
-🔬 Détails techniques
+
+# 🔬 Détails techniques
+
 Format des données
 
 dvf_data.json.gz est un tableau JSON de la forme :
-json
+
+```json
 
 [
   {
@@ -161,15 +169,17 @@ json
     "longitude": -0.5792
   }
 ]
-
+```
 Compression GZIP : ratio ~6:1 (58.9 Mo → 9.6 Mo)
+
 Conversion Lambert-93 → WGS84
 
 La conversion est faite en Python pur (sans pyproj), avec la formule officielle IGN. Précision ~1 mètre, aucune dépendance externe.
 Décompression GZIP côté navigateur
 
 Deux stratégies pour compatibilité maximale :
-javascript
+
+```javascript
 
 if (typeof DecompressionStream !== 'undefined') {
     // API native (Chrome 80+, Firefox 113+, Safari 16.4+)
@@ -181,7 +191,7 @@ if (typeof DecompressionStream !== 'undefined') {
     const buffer = await response.arrayBuffer();
     text = pako.ungzip(new Uint8Array(buffer), { to: 'string' });
 }
-
+```
 ### 📊 Source des données
 
 Les données proviennent du fichier DVF+ (Demandes de Valeurs Foncières) publié par la DGFiP :
@@ -195,43 +205,69 @@ Les données proviennent du fichier DVF+ (Demandes de Valeurs Foncières) publi�
     📍 Zone : Gironde (33)
 
 Nettoyage appliqué
+
 Étape	Règle
+
 Dates	Suppression des dates invalides
+
 Valeur foncière	> 0
+
 Surface	> 0 m²
+
 Type de bien	Uniquement Maison (111) et Appartement (121)
+
 Prix/m²	Entre 200 € et 15 000 €
+
 Coordonnées	Dans la fenêtre Gironde [44.0, 45.7] × [-1.4, 0.5]
+
 Statistiques du fichier
+
 Métrique	Valeur
+
 Lignes brutes	465 409
+
 Transactions valides	301 978
+
 Communes	~100
+
 Prix/m² moyen	~3 000 €
+
 Taille JSON.GZ	9.6 Mo
 
 ### 🧪 Tests rapides
+
 Vérifier que le JSON se charge correctement
-bash
+
+```bash
 
 curl http://localhost:8000/dvf_data.json.gz | gunzip | head -c 500
-
+```
 Vérifier la version de Python
-bash
 
+```
 python --version
 python -c "import platform; print(platform.architecture())"
-
+```
 ### 🐛 Problèmes connus
+
 Problème	Cause	Solution
+
 HTTP 404 sur dvf_data.json.gz	
+
 Fichier manquant	
+
 Vérifier qu'il est dans le même dossier que index.html
+
 Aucun décompresseur GZIP	
+
 Navigateur ancien	
+
 Utiliser Chrome/Firefox/Edge récent
+
 out of memory en conversion	Python 32 bits	Réduire CHUNK_SIZE à 10 000
+
 pip install pyproj échoue	Python 32 bits	Le script n'en a plus besoin (formule IGN intégrée)
+
 Carte vide	Coordonnées invalides	Vérifier la console navigateur (F12)
 
 ### 🗺️ Roadmap
